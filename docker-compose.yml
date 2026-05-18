@@ -1,0 +1,36 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/messageapp
+      JWT_SECRET: ${JWT_SECRET:-please-change-me}
+      JWT_EXPIRES_IN: 7d
+      CLIENT_ORIGIN: http://localhost:8090
+      MEDIA_TTL_DAYS: 7
+      MAX_IMAGE_MB: 10
+      MAX_VIDEO_MB: 50
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8090:80"
+
+volumes:
+  mongo-data:
