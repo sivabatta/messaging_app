@@ -33,7 +33,14 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
     setErr('');
     if (!peer) return;
     api.get(`/messages/history/${peer.id}`).then((r) => {
-      if (!cancelled) setMessages(r.data.messages);
+      if (cancelled) return;
+      // Merge with anything we already received via socket so a fast send
+      // can't be wiped out by a slow history response.
+      setMessages((prev) => {
+        const ids = new Set(r.data.messages.map((m) => m.id));
+        const extras = prev.filter((m) => !ids.has(m.id));
+        return [...r.data.messages, ...extras];
+      });
     });
     api.post('/messages/seen', { from: peer.id }).catch(() => {});
     return () => {
@@ -56,7 +63,7 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         onMessageDelivered?.(msg);
         return;
       }
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
       const isSelfChat = peer.id === user.id;
       if (msg.sender === peer.id && !isSelfChat) {
         notifyAudio?.play().catch(() => {});
@@ -75,18 +82,43 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
     function onTypingStop({ from }) {
       if (from === peer.id) setTyping(false);
     }
+    function onCleared({ between }) {
+      if (!between) return;
+      const pair = new Set(between.map(String));
+      if (pair.has(String(user.id)) && pair.has(String(peer.id))) {
+        setMessages([]);
+      }
+    }
 
     socket.on('message:new', onNew);
     socket.on('message:seen', onSeen);
     socket.on('typing:start', onTypingStart);
     socket.on('typing:stop', onTypingStop);
+    socket.on('chat:cleared', onCleared);
     return () => {
       socket.off('message:new', onNew);
       socket.off('message:seen', onSeen);
       socket.off('typing:start', onTypingStart);
       socket.off('typing:stop', onTypingStop);
+      socket.off('chat:cleared', onCleared);
     };
   }, [socket, peer?.id, user?.id]);
+
+  async function deleteChat() {
+    if (!peer) return;
+    const ok = window.confirm(
+      peer.id === user.id
+        ? 'Delete all Notes-to-self messages? This permanently removes them from the database.'
+        : `Delete the entire conversation with ${peer.username}? This permanently removes all messages and media from the database for both of you.`
+    );
+    if (!ok) return;
+    try {
+      await api.delete(`/messages/conversation/${peer.id}`);
+      setMessages([]);
+    } catch (e) {
+      setErr(e.response?.data?.error || 'delete failed');
+    }
+  }
 
   function emitTyping() {
     if (!socket || !peer) return;
@@ -182,12 +214,19 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
             />
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{peer.username}</div>
           <div className="text-xs text-zinc-500">
             {peer.id === user.id ? 'Messages only you can see' : peer.online ? 'online' : 'offline'}
           </div>
         </div>
+        <button
+          onClick={deleteChat}
+          title="Delete chat"
+          className="text-zinc-500 hover:text-red-600 dark:hover:text-red-400 px-2 py-1 rounded"
+        >
+          🗑
+        </button>
       </header>
 
       <div className="flex-1 overflow-y-auto scroll-thin p-3 sm:p-4 space-y-2">

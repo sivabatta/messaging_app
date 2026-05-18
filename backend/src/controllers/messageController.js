@@ -139,3 +139,37 @@ exports.markSeen = async (req, res) => {
   }
   return res.json({ updated: result.modifiedCount });
 };
+
+exports.deleteConversation = async (req, res) => {
+  const otherId = req.params.userId;
+  if (!mongoose.isValidObjectId(otherId)) return res.status(400).json({ error: 'invalid user id' });
+
+  const filter = {
+    $or: [
+      { sender: req.user.id, receiver: otherId },
+      { sender: otherId, receiver: req.user.id },
+    ],
+  };
+
+  // Collect media refs so we also drop the BLOBs, not just the message rows.
+  const messages = await Message.find(filter).select('media');
+  const mediaIds = messages.map((m) => m.media).filter(Boolean);
+
+  if (mediaIds.length > 0) {
+    await Media.deleteMany({ _id: { $in: mediaIds } });
+  }
+  const result = await Message.deleteMany(filter);
+
+  const io = getIO();
+  if (io) {
+    const payload = { between: [String(req.user.id), String(otherId)] };
+    const selfSid = sidFor(req.user.id);
+    if (selfSid) io.to(selfSid).emit('chat:cleared', payload);
+    if (String(req.user.id) !== String(otherId)) {
+      const otherSid = sidFor(otherId);
+      if (otherSid) io.to(otherSid).emit('chat:cleared', payload);
+    }
+  }
+
+  return res.json({ deletedMessages: result.deletedCount, deletedMedia: mediaIds.length });
+};
