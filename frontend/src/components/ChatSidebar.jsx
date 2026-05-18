@@ -16,8 +16,12 @@ function lastSeenText(u) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function ChatSidebar({ users, activeId, onSelect, onLogout }) {
+export default function ChatSidebar({ users, self, activeId, onSelect, onLogout }) {
   const { user, dark, setDark } = useAuth();
+
+  const selfEntry = self
+    ? { id: self.id, username: 'Notes to self', email: 'Messages only you can see', online: true, lastSeen: null, isSelf: true }
+    : null;
 
   return (
     <aside className="w-full sm:w-80 border-r dark:border-zinc-800 bg-white dark:bg-zinc-900 flex flex-col h-full">
@@ -39,9 +43,24 @@ export default function ChatSidebar({ users, activeId, onSelect, onLogout }) {
       </header>
 
       <div className="flex-1 overflow-y-auto scroll-thin">
+        {selfEntry && (
+          <button
+            onClick={() => onSelect(selfEntry)}
+            className={
+              'w-full flex items-center gap-3 px-4 py-3 text-left border-b dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 ' +
+              (activeId === selfEntry.id ? 'bg-zinc-100 dark:bg-zinc-800' : '')
+            }
+          >
+            <div className="h-10 w-10 rounded-full bg-brand-600 text-white grid place-items-center font-semibold">★</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">Notes to self</div>
+              <div className="text-xs text-zinc-500 truncate">Messages only you can see</div>
+            </div>
+          </button>
+        )}
         {users.length === 0 && (
           <div className="p-6 text-sm text-zinc-500 dark:text-zinc-400 text-center">
-            No other users yet. Invite someone to sign up to start chatting.
+            No other users yet — invite someone, or use Notes to self above.
           </div>
         )}
         {users.map((u) => (

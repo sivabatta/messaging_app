@@ -57,7 +57,8 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         return;
       }
       setMessages((prev) => [...prev, msg]);
-      if (msg.sender === peer.id) {
+      const isSelfChat = peer.id === user.id;
+      if (msg.sender === peer.id && !isSelfChat) {
         notifyAudio?.play().catch(() => {});
         api.post('/messages/seen', { from: peer.id }).catch(() => {});
       }
@@ -89,6 +90,7 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
 
   function emitTyping() {
     if (!socket || !peer) return;
+    if (peer.id === user.id) return; // no typing indicator in Notes to self
     socket.emit('typing:start', { to: peer.id });
     clearTimeout(typingTimer.current);
     typingTimer.current = setTimeout(() => {
@@ -163,19 +165,28 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
           <button className="sm:hidden text-zinc-600 dark:text-zinc-300" onClick={onBack}>←</button>
         )}
         <div className="relative">
-          <div className="h-9 w-9 rounded-full bg-brand-500/20 text-brand-700 dark:text-brand-500 grid place-items-center font-semibold">
-            {peer.username?.slice(0, 2).toUpperCase()}
+          <div className={
+            'h-9 w-9 rounded-full grid place-items-center font-semibold ' +
+            (peer.id === user.id
+              ? 'bg-brand-600 text-white'
+              : 'bg-brand-500/20 text-brand-700 dark:text-brand-500')
+          }>
+            {peer.id === user.id ? '★' : peer.username?.slice(0, 2).toUpperCase()}
           </div>
-          <span
-            className={
-              'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-zinc-900 ' +
-              (peer.online ? 'bg-green-500' : 'bg-zinc-400')
-            }
-          />
+          {peer.id !== user.id && (
+            <span
+              className={
+                'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-zinc-900 ' +
+                (peer.online ? 'bg-green-500' : 'bg-zinc-400')
+              }
+            />
+          )}
         </div>
         <div className="min-w-0">
           <div className="font-medium text-zinc-900 dark:text-zinc-100 truncate">{peer.username}</div>
-          <div className="text-xs text-zinc-500">{peer.online ? 'online' : 'offline'}</div>
+          <div className="text-xs text-zinc-500">
+            {peer.id === user.id ? 'Messages only you can see' : peer.online ? 'online' : 'offline'}
+          </div>
         </div>
       </header>
 

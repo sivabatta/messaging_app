@@ -43,12 +43,7 @@ exports.sendText = async (req, res) => {
   });
 
   const payload = serializeMessage(msg);
-  const io = getIO();
-  if (io) {
-    const recipientSid = sidFor(to);
-    if (recipientSid) io.to(recipientSid).emit('message:new', payload);
-    io.to(sidFor(req.user.id) || '').emit('message:new', payload);
-  }
+  emitMessageNew(req.user.id, to, payload);
   return res.status(201).json({ message: payload });
 };
 
@@ -86,16 +81,23 @@ exports.sendMedia = async (req, res) => {
   // Populate the lean fields for the response (data is still excluded by select: false).
   await msg.populate('media', '-data');
   const payload = serializeMessage(msg);
-
-  const io = getIO();
-  if (io) {
-    const recipientSid = sidFor(to);
-    if (recipientSid) io.to(recipientSid).emit('message:new', payload);
-    const selfSid = sidFor(req.user.id);
-    if (selfSid) io.to(selfSid).emit('message:new', payload);
-  }
+  emitMessageNew(req.user.id, to, payload);
   return res.status(201).json({ message: payload });
 };
+
+function emitMessageNew(fromId, toId, payload) {
+  const io = getIO();
+  if (!io) return;
+  const selfSid = sidFor(fromId);
+  // Self-chat: emit once. Otherwise emit to both peers.
+  if (String(fromId) === String(toId)) {
+    if (selfSid) io.to(selfSid).emit('message:new', payload);
+    return;
+  }
+  const recipientSid = sidFor(toId);
+  if (recipientSid) io.to(recipientSid).emit('message:new', payload);
+  if (selfSid) io.to(selfSid).emit('message:new', payload);
+}
 
 exports.history = async (req, res) => {
   const otherId = req.params.userId;

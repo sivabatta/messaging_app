@@ -44,7 +44,13 @@ function ChatShell() {
       )}
       <div className="flex-1 flex overflow-hidden">
         <div className={(showSidebarOnMobile ? 'flex' : 'hidden') + ' sm:flex'}>
-          <ChatSidebar users={users} activeId={active?.id} onSelect={pick} onLogout={logout} />
+          <ChatSidebar
+            users={users}
+            self={user}
+            activeId={active?.id}
+            onSelect={pick}
+            onLogout={logout}
+          />
         </div>
         <div className={(showSidebarOnMobile ? 'hidden' : 'flex') + ' sm:flex flex-1'}>
           <ChatWindow
