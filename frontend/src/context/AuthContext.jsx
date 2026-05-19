@@ -30,14 +30,14 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  async function login(email, password) {
-    const r = await api.post('/auth/login', { email, password });
+  async function login(username, password) {
+    const r = await api.post('/auth/login', { username, password });
     localStorage.setItem('token', r.data.token);
     setUser(r.data.user);
   }
 
-  async function signup(username, email, password) {
-    const r = await api.post('/auth/signup', { username, email, password });
+  async function signup(username, password) {
+    const r = await api.post('/auth/signup', { username, password });
     localStorage.setItem('token', r.data.token);
     setUser(r.data.user);
   }

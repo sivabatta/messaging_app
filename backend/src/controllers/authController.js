@@ -2,23 +2,29 @@ const User = require('../models/User');
 const { signToken } = require('../middleware/auth');
 
 exports.signup = async (req, res) => {
-  const { username, email, password } = req.body || {};
-  if (!username || !email || !password) return res.status(400).json({ error: 'username, email, password required' });
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'userID and password required' });
+  if (username.length < 4 || username.length > 16) {
+    return res.status(400).json({ error: 'userID must be 4–16 characters' });
+  }
+  if (!/^[A-Za-z0-9_.-]+$/.test(username)) {
+    return res.status(400).json({ error: 'userID may only contain letters, digits, _ . or -' });
+  }
   if (password.length < 6) return res.status(400).json({ error: 'password must be at least 6 chars' });
 
-  const exists = await User.findOne({ $or: [{ email: email.toLowerCase() }, { username }] });
-  if (exists) return res.status(409).json({ error: 'username or email already taken' });
+  const exists = await User.findOne({ username });
+  if (exists) return res.status(409).json({ error: 'userID already taken' });
 
-  const user = new User({ username, email });
+  const user = new User({ username });
   await user.setPassword(password);
   await user.save();
   return res.status(201).json({ token: signToken(user), user: user.toPublicJSON() });
 };
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'email and password required' });
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ error: 'userID and password required' });
+  const user = await User.findOne({ username });
   if (!user || !(await user.verifyPassword(password))) {
     return res.status(401).json({ error: 'invalid credentials' });
   }
@@ -33,13 +39,12 @@ exports.me = async (req, res) => {
 
 exports.listUsers = async (req, res) => {
   const users = await User.find({ _id: { $ne: req.user.id } })
-    .select('username email online lastSeen')
+    .select('username online lastSeen')
     .sort({ username: 1 });
   return res.json({
     users: users.map((u) => ({
       id: u._id.toString(),
       username: u.username,
-      email: u.email,
       online: u.online,
       lastSeen: u.lastSeen,
     })),

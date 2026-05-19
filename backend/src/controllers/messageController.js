@@ -140,6 +140,35 @@ exports.markSeen = async (req, res) => {
   return res.json({ updated: result.modifiedCount });
 };
 
+exports.deleteMessage = async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) return res.status(400).json({ error: 'invalid message id' });
+  const msg = await Message.findById(id);
+  if (!msg) return res.status(404).json({ error: 'not found' });
+  // Only the sender can delete their own message.
+  if (msg.sender.toString() !== req.user.id) return res.status(403).json({ error: 'forbidden' });
+
+  // Drop the attached media BLOB too, if any.
+  if (msg.media) {
+    await Media.deleteOne({ _id: msg.media });
+  }
+  const senderId = msg.sender.toString();
+  const receiverId = msg.receiver.toString();
+  await msg.deleteOne();
+
+  const io = getIO();
+  if (io) {
+    const payload = { id, sender: senderId, receiver: receiverId };
+    const senderSid = sidFor(senderId);
+    if (senderSid) io.to(senderSid).emit('message:deleted', payload);
+    if (senderId !== receiverId) {
+      const receiverSid = sidFor(receiverId);
+      if (receiverSid) io.to(receiverSid).emit('message:deleted', payload);
+    }
+  }
+  return res.json({ deleted: true });
+};
+
 exports.deleteConversation = async (req, res) => {
   const otherId = req.params.userId;
   if (!mongoose.isValidObjectId(otherId)) return res.status(400).json({ error: 'invalid user id' });

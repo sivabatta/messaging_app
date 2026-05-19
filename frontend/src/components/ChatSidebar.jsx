@@ -28,15 +28,23 @@ export default function ChatSidebar({ users, self, activeId, onSelect, onLogout 
       <header className="p-4 border-b dark:border-zinc-800 flex items-center justify-between">
         <div className="min-w-0">
           <div className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">{user?.username}</div>
-          <div className="text-xs text-zinc-500 truncate">{user?.email}</div>
+          <div className="text-xs text-zinc-500 truncate">Signed in</div>
         </div>
-        <div className="flex gap-1">
-          <button onClick={() => setDark(!dark)} title="Toggle theme"
-            className="text-xs px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200">
+        <div className="flex gap-1 shrink-0">
+          <button
+            onClick={() => setDark(!dark)}
+            title="Toggle theme"
+            aria-label="Toggle theme"
+            className="h-9 w-9 grid place-items-center rounded-full bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200"
+          >
             {dark ? '☀' : '☾'}
           </button>
-          <button onClick={onLogout} title="Sign out"
-            className="text-xs px-2 py-1 rounded bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200">
+          <button
+            onClick={onLogout}
+            title="Sign out"
+            aria-label="Sign out"
+            className="h-9 w-9 grid place-items-center rounded-full bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-200"
+          >
             ⎋
           </button>
         </div>

@@ -89,20 +89,37 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         setMessages([]);
       }
     }
+    function onDeleted({ id }) {
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    }
 
     socket.on('message:new', onNew);
     socket.on('message:seen', onSeen);
     socket.on('typing:start', onTypingStart);
     socket.on('typing:stop', onTypingStop);
     socket.on('chat:cleared', onCleared);
+    socket.on('message:deleted', onDeleted);
     return () => {
       socket.off('message:new', onNew);
       socket.off('message:seen', onSeen);
       socket.off('typing:start', onTypingStart);
       socket.off('typing:stop', onTypingStop);
       socket.off('chat:cleared', onCleared);
+      socket.off('message:deleted', onDeleted);
     };
   }, [socket, peer?.id, user?.id]);
+
+  async function deleteMessage(msg) {
+    if (!msg?.id) return;
+    const ok = window.confirm('Delete this message? This is permanent.');
+    if (!ok) return;
+    try {
+      await api.delete(`/messages/${msg.id}`);
+      setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    } catch (e) {
+      setErr(e.response?.data?.error || 'delete failed');
+    }
+  }
 
   async function deleteChat() {
     if (!peer) return;
@@ -194,7 +211,13 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
     <section className="flex-1 flex flex-col h-full bg-zinc-50 dark:bg-zinc-950">
       <header className="px-4 py-3 border-b dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center gap-3">
         {onBack && (
-          <button className="sm:hidden text-zinc-600 dark:text-zinc-300" onClick={onBack}>←</button>
+          <button
+            className="sm:hidden text-2xl leading-none text-zinc-600 dark:text-zinc-300 px-2 -ml-2 py-1"
+            onClick={onBack}
+            aria-label="Back to chats"
+          >
+            ←
+          </button>
         )}
         <div className="relative">
           <div className={
@@ -223,7 +246,8 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         <button
           onClick={deleteChat}
           title="Delete chat"
-          className="text-zinc-500 hover:text-red-600 dark:hover:text-red-400 px-2 py-1 rounded"
+          aria-label="Delete chat"
+          className="text-zinc-500 hover:text-red-600 dark:hover:text-red-400 text-lg px-3 py-2 rounded"
         >
           🗑
         </button>
@@ -231,7 +255,12 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
 
       <div className="flex-1 overflow-y-auto scroll-thin p-3 sm:p-4 space-y-2">
         {sorted.map((m) => (
-          <MessageBubble key={m.id} msg={m} mine={m.sender === user.id} />
+          <MessageBubble
+            key={m.id}
+            msg={m}
+            mine={m.sender === user.id}
+            onDelete={deleteMessage}
+          />
         ))}
         {typing && <TypingIndicator name={peer.username} />}
         <div ref={endRef} />
@@ -248,7 +277,10 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         </div>
       )}
 
-      <form onSubmit={sendText} className="p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center gap-2">
+      <form
+        onSubmit={sendText}
+        className="p-2 sm:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center gap-2"
+      >
         <input
           ref={fileRef}
           type="file"
@@ -259,8 +291,9 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="px-3 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200"
+          className="h-11 w-11 grid place-items-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-lg shrink-0"
           title="Attach image or video"
+          aria-label="Attach image or video"
         >
           📎
         </button>
@@ -271,12 +304,14 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
             emitTyping();
           }}
           placeholder="Type a message"
-          className="flex-1 px-3 py-2 rounded-lg border bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-brand-500"
+          enterKeyHint="send"
+          /* text-base avoids iOS auto-zoom on focus */
+          className="flex-1 min-w-0 h-11 px-3 rounded-full border bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100 outline-none focus:ring-2 focus:ring-brand-500 text-base"
         />
         <button
           type="submit"
           disabled={!text.trim()}
-          className="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50"
+          className="h-11 px-4 sm:px-5 rounded-full bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50 shrink-0"
         >
           Send
         </button>

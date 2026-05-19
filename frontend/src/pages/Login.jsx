@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 export default function Login() {
   const { login, dark, setDark } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -15,7 +15,7 @@ export default function Login() {
     setErr('');
     setBusy(true);
     try {
-      await login(email, password);
+      await login(username, password);
       nav('/');
     } catch (e) {
       setErr(e.response?.data?.error || 'login failed');
@@ -25,7 +25,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-zinc-50 dark:bg-zinc-950 p-4">
+    <div className="min-h-[100dvh] grid place-items-center bg-zinc-50 dark:bg-zinc-950 p-4">
       <form onSubmit={submit} className="w-full max-w-sm bg-white dark:bg-zinc-900 rounded-xl shadow p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Sign in</h1>
@@ -36,11 +36,22 @@ export default function Login() {
         {err && <div className="text-sm text-red-600 bg-red-50 dark:bg-red-900/30 p-2 rounded">{err}</div>}
         <input
           className="w-full px-3 py-2 rounded border bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
-          type="email" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+          placeholder="userID (4–16 chars)"
+          autoComplete="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value.trim())}
+          required
+          minLength={4}
+          maxLength={16}
         />
         <input
           className="w-full px-3 py-2 rounded border bg-zinc-50 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100"
-          type="password" placeholder="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+          type="password"
+          placeholder="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
         />
         <button disabled={busy} className="w-full py-2 rounded bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-50">
           {busy ? 'Signing in…' : 'Sign in'}

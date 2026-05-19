@@ -36,14 +36,14 @@ function ChatShell() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-zinc-100 dark:bg-zinc-950">
+    <div className="h-[100dvh] flex flex-col bg-zinc-100 dark:bg-zinc-950">
       {!connected && (
         <div className="text-xs bg-yellow-100 dark:bg-yellow-900/50 text-yellow-900 dark:text-yellow-100 text-center py-1">
           Reconnecting…
         </div>
       )}
       <div className="flex-1 flex overflow-hidden">
-        <div className={(showSidebarOnMobile ? 'flex' : 'hidden') + ' sm:flex'}>
+        <div className={(showSidebarOnMobile ? 'flex' : 'hidden') + ' sm:flex w-full sm:w-auto'}>
           <ChatSidebar
             users={users}
             self={user}
@@ -52,7 +52,7 @@ function ChatShell() {
             onLogout={logout}
           />
         </div>
-        <div className={(showSidebarOnMobile ? 'hidden' : 'flex') + ' sm:flex flex-1'}>
+        <div className={(showSidebarOnMobile ? 'hidden' : 'flex') + ' sm:flex flex-1 min-w-0'}>
           <ChatWindow
             peer={active}
             socket={socket}
