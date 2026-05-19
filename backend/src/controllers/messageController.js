@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Media = require('../models/Media');
 const { ALLOWED, validateSize } = require('../middleware/upload');
-const { getIO, sidFor } = require('../socket');
+const { emitToUser } = require('../socket');
 
 const TTL_DAYS = Number(process.env.MEDIA_TTL_DAYS) || 7;
 
@@ -86,17 +86,11 @@ exports.sendMedia = async (req, res) => {
 };
 
 function emitMessageNew(fromId, toId, payload) {
-  const io = getIO();
-  if (!io) return;
-  const selfSid = sidFor(fromId);
-  // Self-chat: emit once. Otherwise emit to both peers.
-  if (String(fromId) === String(toId)) {
-    if (selfSid) io.to(selfSid).emit('message:new', payload);
-    return;
+  // Always fan out to every socket the sender owns (laptop + phone + ...).
+  emitToUser(fromId, 'message:new', payload);
+  if (String(fromId) !== String(toId)) {
+    emitToUser(toId, 'message:new', payload);
   }
-  const recipientSid = sidFor(toId);
-  if (recipientSid) io.to(recipientSid).emit('message:new', payload);
-  if (selfSid) io.to(selfSid).emit('message:new', payload);
 }
 
 exports.history = async (req, res) => {
@@ -132,10 +126,8 @@ exports.markSeen = async (req, res) => {
     { $set: { seen: true, seenAt: now } }
   );
 
-  const io = getIO();
-  if (io && result.modifiedCount > 0) {
-    const senderSid = sidFor(from);
-    if (senderSid) io.to(senderSid).emit('message:seen', { by: req.user.id, at: now });
+  if (result.modifiedCount > 0) {
+    emitToUser(from, 'message:seen', { by: req.user.id, at: now });
   }
   return res.json({ updated: result.modifiedCount });
 };
@@ -156,15 +148,10 @@ exports.deleteMessage = async (req, res) => {
   const receiverId = msg.receiver.toString();
   await msg.deleteOne();
 
-  const io = getIO();
-  if (io) {
-    const payload = { id, sender: senderId, receiver: receiverId };
-    const senderSid = sidFor(senderId);
-    if (senderSid) io.to(senderSid).emit('message:deleted', payload);
-    if (senderId !== receiverId) {
-      const receiverSid = sidFor(receiverId);
-      if (receiverSid) io.to(receiverSid).emit('message:deleted', payload);
-    }
+  const payload = { id, sender: senderId, receiver: receiverId };
+  emitToUser(senderId, 'message:deleted', payload);
+  if (senderId !== receiverId) {
+    emitToUser(receiverId, 'message:deleted', payload);
   }
   return res.json({ deleted: true });
 };
@@ -189,15 +176,10 @@ exports.deleteConversation = async (req, res) => {
   }
   const result = await Message.deleteMany(filter);
 
-  const io = getIO();
-  if (io) {
-    const payload = { between: [String(req.user.id), String(otherId)] };
-    const selfSid = sidFor(req.user.id);
-    if (selfSid) io.to(selfSid).emit('chat:cleared', payload);
-    if (String(req.user.id) !== String(otherId)) {
-      const otherSid = sidFor(otherId);
-      if (otherSid) io.to(otherSid).emit('chat:cleared', payload);
-    }
+  const payload = { between: [String(req.user.id), String(otherId)] };
+  emitToUser(req.user.id, 'chat:cleared', payload);
+  if (String(req.user.id) !== String(otherId)) {
+    emitToUser(otherId, 'chat:cleared', payload);
   }
 
   return res.json({ deletedMessages: result.deletedCount, deletedMedia: mediaIds.length });
