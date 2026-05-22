@@ -184,8 +184,7 @@ Open `http://localhost:5173`, sign up two accounts in two browsers (or one regul
 | `JWT_EXPIRES_IN` | `7d` | Token lifetime |
 | `CLIENT_ORIGIN` | `http://localhost:5173` | CORS origin |
 | `MEDIA_TTL_DAYS` | `7` | Media expiry window |
-| `MAX_IMAGE_MB` | `10` | Per-image cap |
-| `MAX_VIDEO_MB` | `50` | Per-video cap |
+| `MAX_FILE_MB` | `50` | Per-file cap (any type) |
 
 ---
 

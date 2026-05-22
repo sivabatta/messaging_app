@@ -4,7 +4,7 @@ const mediaSchema = new mongoose.Schema(
   {
     fileName: { type: String, required: true },
     fileType: { type: String, required: true }, // mime type
-    kind: { type: String, enum: ['image', 'video'], required: true },
+    kind: { type: String, enum: ['image', 'video', 'file'], required: true },
     size: { type: Number, required: true },
     data: { type: Buffer, required: true, select: false }, // BLOB — never auto-loaded
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },

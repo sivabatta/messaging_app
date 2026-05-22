@@ -18,11 +18,15 @@ exports.download = async (req, res) => {
     return res.status(410).json({ error: 'media expired' });
   }
 
-  res.setHeader('Content-Type', media.fileType);
+  // Images and videos can render inline so the chat shows previews.
+  // Everything else is forced as a download — prevents browsers from
+  // interpreting arbitrary uploads (HTML, SVG with scripts, etc.) inline.
+  const inline = media.kind === 'image' || media.kind === 'video';
+  res.setHeader('Content-Type', media.fileType || 'application/octet-stream');
   res.setHeader('Content-Length', media.size);
   res.setHeader(
     'Content-Disposition',
-    `inline; filename="${encodeURIComponent(media.fileName)}"`
+    `${inline ? 'inline' : 'attachment'}; filename="${encodeURIComponent(media.fileName)}"`
   );
   res.setHeader('Cache-Control', 'private, max-age=300');
   return res.end(media.data);

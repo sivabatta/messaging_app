@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Message = require('../models/Message');
 const Media = require('../models/Media');
-const { ALLOWED, validateSize } = require('../middleware/upload');
+const { kindFor, MAX_BYTES, MAX_MB } = require('../middleware/upload');
 const { emitToUser } = require('../socket');
 
 const TTL_DAYS = Number(process.env.MEDIA_TTL_DAYS) || 7;
@@ -51,18 +51,17 @@ exports.sendMedia = async (req, res) => {
   const { to } = req.body || {};
   if (!to || !mongoose.isValidObjectId(to)) return res.status(400).json({ error: 'invalid recipient' });
   if (!req.file) return res.status(400).json({ error: 'file required' });
+  if (req.file.size > MAX_BYTES) {
+    return res.status(413).json({ error: `file exceeds ${MAX_MB}MB limit` });
+  }
 
-  const meta = ALLOWED[req.file.mimetype];
-  if (!meta) return res.status(400).json({ error: 'unsupported file type' });
-  const sizeErr = validateSize(req.file);
-  if (sizeErr) return res.status(413).json({ error: sizeErr });
-
+  const kind = kindFor(req.file.mimetype);
   const expiryDate = new Date(Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000);
 
   const media = await Media.create({
     fileName: req.file.originalname,
-    fileType: req.file.mimetype,
-    kind: meta.kind,
+    fileType: req.file.mimetype || 'application/octet-stream',
+    kind,
     size: req.file.size,
     data: req.file.buffer,
     sender: req.user.id,
@@ -74,7 +73,7 @@ exports.sendMedia = async (req, res) => {
   const msg = await Message.create({
     sender: req.user.id,
     receiver: to,
-    type: meta.kind,
+    type: kind,
     media: media._id,
   });
 

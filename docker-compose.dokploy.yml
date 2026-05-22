@@ -24,8 +24,7 @@ services:
       JWT_EXPIRES_IN: 365d
       CLIENT_ORIGIN: ${CLIENT_ORIGIN}
       MEDIA_TTL_DAYS: 7
-      MAX_IMAGE_MB: 10
-      MAX_VIDEO_MB: 50
+      MAX_FILE_MB: 50
     expose:
       - "5000"
 

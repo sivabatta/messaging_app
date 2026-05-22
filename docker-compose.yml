@@ -19,8 +19,7 @@ services:
       JWT_EXPIRES_IN: 365d
       CLIENT_ORIGIN: http://localhost:8090
       MEDIA_TTL_DAYS: 7
-      MAX_IMAGE_MB: 10
-      MAX_VIDEO_MB: 50
+      MAX_FILE_MB: 50
     ports:
       - "5000:5000"
 

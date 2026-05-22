@@ -5,9 +5,7 @@ import MessageBubble from './MessageBubble.jsx';
 import TypingIndicator from './TypingIndicator.jsx';
 import UploadProgress from './UploadProgress.jsx';
 
-const ACCEPT = 'image/jpeg,image/png,video/mp4,video/quicktime';
-const MAX_IMAGE_MB = 10;
-const MAX_VIDEO_MB = 50;
+const MAX_FILE_MB = 50;
 
 const notifyAudio = typeof window !== 'undefined'
   ? new Audio(
@@ -162,15 +160,8 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
 
   async function sendFile(file) {
     if (!file || !peer) return;
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    if (!ACCEPT.split(',').includes(file.type)) {
-      setErr('only JPG, PNG, MP4, MOV allowed');
-      return;
-    }
-    const limitMB = isImage ? MAX_IMAGE_MB : isVideo ? MAX_VIDEO_MB : 0;
-    if (file.size > limitMB * 1024 * 1024) {
-      setErr(`file exceeds ${limitMB}MB`);
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      setErr(`file exceeds ${MAX_FILE_MB}MB`);
       return;
     }
     setErr('');
@@ -284,7 +275,6 @@ export default function ChatWindow({ peer, socket, onMessageDelivered, onBack })
         <input
           ref={fileRef}
           type="file"
-          accept={ACCEPT}
           className="hidden"
           onChange={(e) => sendFile(e.target.files?.[0])}
         />
