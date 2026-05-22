@@ -15,3 +15,9 @@ export function mediaUrl(id) {
   // The /media route accepts ?token= so <img>/<video> tags can authenticate.
   return `${baseURL}/media/${id}?token=${encodeURIComponent(token || '')}`;
 }
+
+// Same endpoint but the server will set Content-Disposition: attachment so the
+// browser actually saves the file rather than opening it inline.
+export function mediaDownloadUrl(id) {
+  return `${mediaUrl(id)}&download=1`;
+}

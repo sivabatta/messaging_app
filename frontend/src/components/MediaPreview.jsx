@@ -1,4 +1,4 @@
-import { mediaUrl } from '../api/client';
+import { mediaDownloadUrl, mediaUrl } from '../api/client';
 
 function fmtSize(b) {
   if (!b) return '';
@@ -28,6 +28,23 @@ function iconFor(fileName, fileType) {
   return '📎';
 }
 
+function DownloadButton({ media, compact }) {
+  return (
+    <a
+      href={mediaDownloadUrl(media.id)}
+      download={media.fileName}
+      className={
+        'inline-flex items-center gap-1 rounded bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-700 ' +
+        (compact ? 'text-[11px] px-2 py-0.5' : 'text-xs px-2.5 py-1')
+      }
+      title="Download"
+    >
+      <span>↓</span>
+      <span>Download</span>
+    </a>
+  );
+}
+
 export default function MediaPreview({ media }) {
   if (!media) {
     return (
@@ -55,7 +72,12 @@ export default function MediaPreview({ media }) {
             loading="lazy"
           />
         </a>
-        <FileFooter media={media} url={url} left={left} />
+        <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <span className="truncate max-w-[160px]" title={media.fileName}>
+            {media.fileName} · {fmtSize(media.size)} · {left}d left
+          </span>
+          <DownloadButton media={media} compact />
+        </div>
       </div>
     );
   }
@@ -69,18 +91,19 @@ export default function MediaPreview({ media }) {
           className="max-w-xs max-h-64 rounded-lg bg-black"
           preload="metadata"
         />
-        <FileFooter media={media} url={url} left={left} />
+        <div className="flex items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+          <span className="truncate max-w-[160px]" title={media.fileName}>
+            {media.fileName} · {fmtSize(media.size)} · {left}d left
+          </span>
+          <DownloadButton media={media} compact />
+        </div>
       </div>
     );
   }
 
-  // Generic file: card with icon + name + size + download button.
+  // Generic file: icon + name + size on the left, explicit Download button on the right.
   return (
-    <a
-      href={url}
-      download={media.fileName}
-      className="flex items-center gap-3 max-w-xs bg-black/10 dark:bg-white/10 rounded-lg p-2 hover:bg-black/15 dark:hover:bg-white/15"
-    >
+    <div className="flex items-center gap-3 max-w-xs bg-black/10 dark:bg-white/10 rounded-lg p-2">
       <div className="h-10 w-10 grid place-items-center text-2xl bg-white/30 dark:bg-black/30 rounded-md shrink-0">
         {iconFor(media.fileName, media.fileType)}
       </div>
@@ -89,26 +112,10 @@ export default function MediaPreview({ media }) {
           {media.fileName}
         </div>
         <div className="text-[11px] opacity-75">
-          {fmtSize(media.size)} · ↓ {left}d left
+          {fmtSize(media.size)} · {left}d left
         </div>
       </div>
-    </a>
-  );
-}
-
-function FileFooter({ media, url, left }) {
-  return (
-    <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
-      <span className="truncate max-w-[180px]" title={media.fileName}>
-        {media.fileName} · {fmtSize(media.size)}
-      </span>
-      <a
-        href={url}
-        download={media.fileName}
-        className="ml-2 px-2 py-0.5 rounded bg-brand-600 text-white hover:bg-brand-700"
-      >
-        ↓ Download · {left}d left
-      </a>
+      <DownloadButton media={media} />
     </div>
   );
 }
